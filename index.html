@@ -3,424 +3,237 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Mana Royale</title>
+    <title>Mana Royale Mobile</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
-            --bg: #1e293b; /* Фон игры */
-            --card-bg: #2d3a4b; /* Фон карточек UI */
-            --text: #f8fafc; /* Основной текст */
-            --accent: #38bdf8; /* Акцентный цвет (для кнопок, ника) */
-            --gold: #f59e0b; /* Золото */
-            --elixir: #d946ef; /* Эликсир */
-            --player-color: #10b981; /* Цвет игрока (зеленый) */
-            --enemy-color: #ef4444; /* Цвет врага (красный) */
-            --tower-hp-bg: #475569; /* Фон HP башен */
+            --bg: #1e293b; --field: #334155; --elixir: #d946ef;
+            --hp: #ef4444; --gold: #f59e0b; --accent: #38bdf8;
         }
-        .light-theme {
-            --bg: #f1f5f9;
-            --card-bg: #ffffff;
-            --text: #0f172a;
-            --accent: #0284c7;
-        }
-
         body {
-            margin: 0; padding: 0;
-            background-color: var(--bg);
-            color: var(--text);
-            font-family: 'Inter', sans-serif;
-            display: flex; flex-direction: column;
-            height: 100vh; overflow: hidden;
-            transition: background-color 0.3s, color 0.3s;
-            user-select: none;
+            margin: 0; padding: 0; background: var(--bg);
+            color: white; font-family: 'Segoe UI', sans-serif;
+            overflow: hidden; display: flex; flex-direction: column; height: 100vh;
         }
 
-        /* Nav Bar */
-        .nav-bar {
-            display: flex; justify-content: space-around;
-            background: var(--card-bg);
-            padding: 10px 0;
-            border-top: 1px solid rgba(255,255,255,0.1);
-            position: fixed; bottom: 0; width: 100%; z-index: 100;
-        }
-        .nav-item {
-            font-size: 10px; cursor: pointer; opacity: 0.6; text-align: center; flex: 1;
-            transition: opacity 0.2s, color 0.2s;
-        }
-        .nav-item.active { opacity: 1; color: var(--accent); font-weight: bold; }
-
-        /* Screens */
-        .screen {
-            display: none; padding: 15px; padding-bottom: 90px;
-            overflow-y: auto; flex: 1;
-        }
-        .screen.active {
-            display: flex; flex-direction: column; /* Для Arena Screen */
-            animation: fadeIn 0.2s;
-        }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        /* General Card & Button Styles */
-        .card {
-            background: var(--card-bg); border-radius: 16px;
-            padding: 15px; margin-bottom: 12px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-        }
-        .btn {
-            background: var(--accent); color: white; border: none;
-            padding: 10px; border-radius: 10px; font-weight: bold;
-            cursor: pointer; width: 100%; transition: transform 0.1s;
-        }
-        .btn:active { transform: scale(0.98); }
-        .btn:disabled { opacity: 0.4; pointer-events: none; }
-        
-        input {
-            width: 100%; padding: 10px; border-radius: 8px;
-            border: 1px solid #475569; background: var(--bg); color: var(--text);
-            box-sizing: border-box; margin-bottom: 8px;
+        /* Шапка с ресурсами */
+        .header {
+            height: 50px; display: flex; justify-content: space-between;
+            align-items: center; padding: 0 15px; background: rgba(0,0,0,0.3);
+            font-weight: bold; font-size: 14px;
         }
 
-        /* --- ARENA SPECIFIC STYLES --- */
-        #arena-screen {
-            flex: 1; display: flex; flex-direction: column;
-            background: #334155; /* Фон арены */
-            position: relative;
-            overflow: hidden; /* Важно для анимации юнитов */
-        }
-
-        #arena-field {
-            flex: 1; position: relative;
-            border-bottom: 5px solid #475569; /* Разделительная линия */
-            background: #2d3a4b; /* Более темный фон для поля */
+        /* Арена */
+        #arena {
+            flex: 1; position: relative; background: var(--field);
+            margin: 10px; border-radius: 15px; border: 3px solid #475569;
+            overflow: hidden;
         }
 
         .tower {
             position: absolute; width: 60px; height: 60px;
             background: #64748b; border-radius: 10px;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            font-size: 10px; font-weight: bold;
-            color: white; text-shadow: 1px 1px 1px black;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            border: 3px solid white; z-index: 5;
         }
-        .tower .hp-bar-outer { width: 80%; height: 5px; background: var(--tower-hp-bg); border-radius: 3px; margin-top: 2px; }
-        .tower .hp-bar-inner { height: 100%; background: var(--hp); width: 100%; transition: width 0.2s; }
+        .tower.enemy { top: 20px; left: calc(50% - 30px); border-color: var(--hp); }
+        .tower.player { bottom: 20px; left: calc(50% - 30px); border-color: var(--accent); }
 
-        #player-tower { bottom: 20px; left: calc(50% - 30px); border: 3px solid var(--player-color); }
-        #enemy-tower { top: 20px; left: calc(50% - 30px); border: 3px solid var(--enemy-color); }
+        .hp-bar {
+            width: 50px; height: 6px; background: #222;
+            border-radius: 3px; position: absolute; top: -12px;
+        }
+        .hp-fill { height: 100%; background: #22c55e; width: 100%; transition: 0.3s; }
 
+        /* Юниты */
         .unit {
-            position: absolute; width: 35px; height: 35px; border-radius: 50%;
+            position: absolute; width: 34px; height: 34px; border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
-            font-size: 20px; z-index: 10;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.4);
-            transition: all 0.3s ease-out; /* Плавное движение */
+            font-size: 20px; z-index: 10; transition: transform 0.2s linear;
         }
-        .unit .hp-bar { position: absolute; top: -8px; width: 25px; height: 3px; background: #333; border-radius: 2px; overflow: hidden; }
-        .unit .hp-fill { height: 100%; background: var(--player-color); width: 100%; transition: width 0.1s; }
 
-        /* UI Panel (Elixir & Cards) */
-        #arena-ui-panel {
-            background: var(--card-bg); padding: 10px;
+        /* Нижняя панель управления */
+        .controls {
+            height: 180px; background: #0f172a; padding: 10px;
             display: flex; flex-direction: column; align-items: center;
-            border-top: 1px solid rgba(255,255,255,0.1);
         }
 
-        #elixir-bar-container {
-            width: 90%; height: 25px; background: #0f172a; border-radius: 12px;
-            margin-bottom: 10px; position: relative; overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.2);
+        .elixir-container {
+            width: 90%; height: 18px; background: #334155;
+            border-radius: 9px; position: relative; overflow: hidden; margin-bottom: 10px;
         }
-        #elixir-fill { height: 100%; background: var(--elixir); width: 0%; transition: width 0.3s ease-out; }
-        #elixir-text {
-            position: absolute; width: 100%; text-align: center;
-            line-height: 25px; font-weight: bold; font-size: 14px;
-            color: white; text-shadow: 1px 1px 1px black;
-        }
+        #elixir-fill { height: 100%; background: var(--elixir); width: 0%; transition: 0.3s linear; }
         
-        .hand {
-            display: flex; gap: 10px; justify-content: center; width: 100%;
+        .hand { display: flex; gap: 8px; justify-content: center; }
+        .card {
+            width: 75px; height: 100px; background: #475569; border-radius: 10px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            position: relative; border: 2px solid transparent;
         }
-        .card-item {
-            width: 70px; height: 90px; background: #475569; border-radius: 8px;
-            display: flex; flex-direction: column; align-items: center; justify-content: space-around;
-            font-size: 12px; cursor: pointer; border: 2px solid transparent;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-            transition: transform 0.1s, opacity 0.2s, border-color 0.2s;
+        .card.active { border-color: var(--accent); transform: translateY(-5px); }
+        .card.disabled { opacity: 0.5; filter: grayscale(1); }
+        .card .cost {
+            position: absolute; top: -5px; left: -5px; background: var(--elixir);
+            width: 22px; height: 22px; border-radius: 50%; display: flex;
+            align-items: center; justify-content: center; font-size: 12px; font-weight: bold;
         }
-        .card-item:active:not(.disabled) { transform: scale(0.95); }
-        .card-item.disabled { opacity: 0.5; filter: grayscale(1); cursor: not-allowed; }
-        .card-item .cost { font-size: 16px; font-weight: bold; color: var(--gold); }
-        .card-item .icon { font-size: 30px; line-height: 1; }
+        .card .icon { font-size: 32px; margin-bottom: 5px; }
+        .card .name { font-size: 10px; text-transform: uppercase; font-weight: bold; }
 
-        /* Message Boxes */
-        #message-box {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.8); color: white; padding: 20px; border-radius: 15px;
-            z-index: 1000; display: none; text-align: center;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-        }
-
-        /* General List Items (for Friends, Shop, etc.) */
-        .item-row {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
-        }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
-        .online { background: var(--player-color); box-shadow: 0 0 5px var(--player-color); }
-        .offline { background: #64748b; }
     </style>
 </head>
 <body>
 
-    <div id="message-box"></div>
-
-    <div id="screen-arena" class="screen active">
-        <div id="arena-field">
-            <div id="enemy-tower" class="tower">
-                <div style="font-size:25px;">🏰</div>
-                <div class="hp-bar-outer"><div id="enemy-hp-fill" class="hp-bar-inner"></div></div>
-                <div id="enemy-hp-text">2000</div>
-            </div>
-            <div id="player-tower" class="tower">
-                <div style="font-size:25px;">🏰</div>
-                <div class="hp-bar-outer"><div id="player-hp-fill" class="hp-bar-inner"></div></div>
-                <div id="player-hp-text">2000</div>
-            </div>
-        </div>
-        <div id="arena-ui-panel">
-            <div id="elixir-bar-container">
-                <div id="elixir-fill"></div>
-                <div id="elixir-text">Эликсир: 0/10</div>
-            </div>
-            <div class="hand" id="card-hand">
-                </div>
-        </div>
+    <div class="header">
+        <div id="p-name">Загрузка...</div>
+        <div style="color:var(--gold)">💰 <span id="p-gold">0</span></div>
+        <div style="color:var(--accent)">УР. <span id="p-lvl">1</span></div>
     </div>
 
-    <div id="screen-chat" class="screen">
-        <h3>💬 Глобальный чат</h3>
-        <div id="chat-box" style="height:calc(100vh - 250px); overflow-y:auto; background:rgba(0,0,0,0.2); padding:10px; border-radius:12px; margin-bottom:10px;"></div>
-        <div style="display: flex; gap: 8px;">
-            <input type="text" id="msg-input" placeholder="Сообщение..." style="flex:1;">
-            <button class="btn" style="width: 60px;" onclick="sendMessage()">➤</button>
+    <div id="arena">
+        <div class="tower enemy" id="enemy-tower">
+            <div class="hp-bar"><div class="hp-fill" id="enemy-hp"></div></div>
+            🏰
         </div>
-    </div>
-
-    <div id="screen-inventory" class="screen">
-        <h3>🛒 Магазин</h3>
-        <div class="card" id="shop-list"></div>
-        <h3>🎒 Инвентарь</h3>
-        <div class="card" id="inventory-list">В инвентаре пусто</div>
-    </div>
-
-    <div id="screen-friends" class="screen">
-        <h3>👥 Друзья</h3>
-        <div class="card">
-            <input type="text" id="friend-id-input" placeholder="Введите ID игрока">
-            <button class="btn" onclick="sendFriendRequest()">Добавить в друзья</button>
-        </div>
-        <div id="pending-requests"></div>
-        <div class="card" id="friends-list">Загрузка...</div>
         
-        <h3>🏆 Топ 10 Игроков</h3>
-        <div class="card" id="leaderboard-list"></div>
+        <div class="tower player" id="player-tower">
+            <div class="hp-bar"><div class="hp-fill" id="player-hp"></div></div>
+            👑
+        </div>
     </div>
 
-    <div id="screen-profile" class="screen">
-        <h3>👤 Профиль Героя</h3>
-        <div class="card">
-            <p style="font-size:14px; opacity:0.7;">Твой уникальный ID (отправь другу):</p>
-            <p id="my-id-display" style="font-family: monospace; color:var(--accent); font-size:18px; font-weight:bold;"></p>
-            <input type="text" id="in-name" maxlength="15">
-            <button class="btn" onclick="updateNick()">Сохранить ник</button>
+    <div class="controls">
+        <div class="elixir-container">
+            <div id="elixir-fill"></div>
         </div>
-        <div class="card">
-            <button class="btn" id="daily-btn" style="background: var(--gold);" onclick="claimDaily()">🎁 Ежедневная награда (500💰)</button>
-            <p id="daily-timer" style="font-size:12px; text-align:center; margin-top:8px; color:var(--gold);"></p>
+        
+        <div class="hand">
+            <div class="card" onclick="playCard('knight', 3)">
+                <div class="cost">3</div>
+                <div class="icon">⚔️</div>
+                <div class="name">Рыцарь</div>
+            </div>
+            <div class="card" onclick="playCard('archer', 2)">
+                <div class="cost">2</div>
+                <div class="icon">🏹</div>
+                <div class="name">Лучник</div>
+            </div>
+            <div class="card" onclick="playCard('giant', 5)">
+                <div class="cost">5</div>
+                <div class="icon">🛡️</div>
+                <div class="name">Гигант</div>
+            </div>
         </div>
-        <button class="btn" style="background:#64748b" onclick="toggleTheme()">🌗 Сменить тему</button>
-    </div>
-
-    <div class="nav-bar">
-        <div class="nav-item active" onclick="showScreen('arena')">⚔️<br>Арена</div>
-        <div class="nav-item" onclick="showScreen('chat')">💬<br>Чат</div>
-        <div class="nav-item" onclick="showScreen('inventory')">🎒<br>Инвент.</div>
-        <div class="nav-item" onclick="showScreen('friends')">👥<br>Друзья</div>
-        <div class="nav-item" onclick="showScreen('profile')">👤<br>Герой</div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, orderBy, limit, onSnapshot, addDoc, serverTimestamp, arrayUnion, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // --- Firebase Config ---
         const firebaseConfig = {
-            apiKey: "AIzaSyCyZxBg-j_XKkvaqoKxi62uFY73kDkVWk4", // Твой API-ключ
-            authDomain: "manasteel-bf5f7.firebaseapp.com",
+            apiKey: "AIzaSyCyZxBg-j_XKkvaqoKxi62uFY73kDkVWk4",
             projectId: "manasteel-bf5f7",
-            storageBucket: "manasteel-bf5f7.appspot.com",
-            messagingSenderId: "120074826718",
             appId: "1:120074826718:web:9b289a1d28aceda479634f"
         };
+
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        // --- Game State & Player Data ---
-        let p = { name: 'Герой', level: 1, gold: 0, inventory: [], equipped: null, hasBot: false, lastDaily: 0, friends: [], lastSeen: 0 };
-        const uid = String(tg.initDataUnsafe.user?.id || "dev_test_user");
+        let player = { name: "Игрок", gold: 0, level: 1 };
+        const uid = String(tg.initDataUnsafe.user?.id || "tester");
 
-        // Arena Specific
+        // Игровая логика
         let elixir = 0;
-        let playerTowerHP = 2000;
-        let enemyTowerHP = 2000;
-        const UNIT_TYPES = {
-            knight: { cost: 3, hp: 500, dmg: 50, speed: 1.5, icon: '⚔️', color: '#fbbf24' },
-            archer: { cost: 2, hp: 200, dmg: 30, speed: 2, icon: '🏹', color: '#f87171' },
-            giant: { cost: 5, hp: 1500, dmg: 40, speed: 1, icon: '🛡️', color: '#fb923c' }
-        };
-        const activeUnits = []; // Юниты на поле боя
-        let elixirInterval;
-        let gameLoopInterval;
+        let enemyHP = 1000;
+        let units = [];
 
-        // --- INITIALIZATION ---
         async function init() {
             const snap = await getDoc(doc(db, "players", uid));
-            if (snap.exists()) {
-                p = { ...p, ...snap.data() };
-            } else {
-                p.name = tg.initDataUnsafe.user?.first_name || "Герой";
-                await setDoc(doc(db, "players", uid), p);
-            }
+            if (snap.exists()) player = snap.data();
+            else await setDoc(doc(db, "players", uid), player);
             
-            document.getElementById('my-id-display').innerText = uid;
             updateUI();
-            listenToChat();
-            listenToRequests();
-            setInterval(heartbeat, 30000); // Обновление "онлайн" статуса
-            heartbeat();
-            checkDailyStatus();
-            startArenaGame(); // Запускаем арену сразу при инициализации
+            gameLoop();
         }
 
-        // --- ARENA GAME LOGIC ---
-        function startArenaGame() {
-            // Сброс состояния для новой игры
-            elixir = 0;
-            playerTowerHP = 2000;
-            enemyTowerHP = 2000;
-            activeUnits.length = 0; // Очищаем массив юнитов
-            document.getElementById('arena-field').innerHTML = `
-                <div id="enemy-tower" class="tower">
-                    <div style="font-size:25px;">🏰</div>
-                    <div class="hp-bar-outer"><div id="enemy-hp-fill" class="hp-bar-inner"></div></div>
-                    <div id="enemy-hp-text">2000</div>
-                </div>
-                <div id="player-tower" class="tower">
-                    <div style="font-size:25px;">🏰</div>
-                    <div class="hp-bar-outer"><div id="player-hp-fill" class="hp-bar-inner"></div></div>
-                    <div id="player-hp-text">2000</div>
-                </div>
-            `; // Пересоздаем башни для чистоты
-
-            if (elixirInterval) clearInterval(elixirInterval);
-            if (gameLoopInterval) clearInterval(gameLoopInterval);
-
-            elixirInterval = setInterval(gainElixir, 1000); // Эликсир каждые 1 секунду
-            gameLoopInterval = setInterval(gameLoop, 50); // Игровой цикл каждые 50мс
-
-            renderCardHand(); // Отрисовываем карты
-            updateArenaUI(); // Обновляем UI арены
+        function updateUI() {
+            document.getElementById('p-name').innerText = player.name;
+            document.getElementById('p-gold').innerText = player.gold;
+            document.getElementById('p-lvl').innerText = player.level;
         }
 
-        function gainElixir() {
-            if (elixir < 10) {
-                elixir = Math.min(10, elixir + 1); // +1 эликсира в секунду
-                updateArenaUI();
-            }
-        }
-
-        function renderCardHand() {
-            const hand = document.getElementById('card-hand');
-            hand.innerHTML = '';
-            Object.keys(UNIT_TYPES).forEach(type => {
-                const config = UNIT_TYPES[type];
-                const cardEl = document.createElement('div');
-                cardEl.className = 'card-item';
-                cardEl.innerHTML = `<span class="icon">${config.icon}</span><span>${config.n || type}</span><b class="cost">${config.cost}</b>`;
-                cardEl.onclick = () => spawnUnit(type);
-                hand.appendChild(cardEl);
-            });
-            updateCardAvailability();
-        }
-
-        function updateCardAvailability() {
-            document.querySelectorAll('.card-item').forEach(cardEl => {
-                const type = cardEl.querySelector('span:nth-child(2)').innerText.toLowerCase(); // Assuming name is second span
-                const config = UNIT_TYPES[type];
-                if (elixir >= config.cost) {
-                    cardEl.classList.remove('disabled');
-                } else {
-                    cardEl.classList.add('disabled');
+        // Основной цикл
+        function gameLoop() {
+            setInterval(() => {
+                // Пополнение эликсира
+                if (elixir < 10) {
+                    elixir += 0.05;
+                    document.getElementById('elixir-fill').style.width = (elixir * 10) + "%";
                 }
-            });
+
+                // Логика карт
+                document.querySelectorAll('.card').forEach(card => {
+                    const cost = parseInt(card.querySelector('.cost').innerText);
+                    if (elixir < cost) card.classList.add('disabled');
+                    else card.classList.remove('disabled');
+                });
+
+                // Движение юнитов
+                units.forEach((unit, index) => {
+                    if (unit.y > 60) { // Если еще не дошел до башни врага
+                        unit.y -= unit.speed;
+                        unit.el.style.top = unit.y + "px";
+                    } else {
+                        // Атака башни
+                        enemyHP -= unit.dmg;
+                        document.getElementById('enemy-hp').style.width = (enemyHP / 10) + "%";
+                        
+                        if (enemyHP <= 0) victory();
+                    }
+                });
+            }, 50);
         }
 
-        window.spawnUnit = (type) => {
-            const config = UNIT_TYPES[type];
-            if (elixir >= config.cost) {
-                elixir -= config.cost;
-                tg.HapticFeedback.impactOccurred('light');
+        window.playCard = (type, cost) => {
+            if (elixir < cost) return;
+            elixir -= cost;
+            tg.HapticFeedback.impactOccurred('medium');
 
-                const unitEl = document.createElement('div');
-                unitEl.className = 'unit';
-                unitEl.style.backgroundColor = config.color;
-                unitEl.style.bottom = '80px'; // Спавн снизу
-                unitEl.style.left = `${50 + (Math.random() * 20 - 10)}%`; // Немного рандомизируем X
-                unitEl.innerHTML = `<div class="hp-bar"><div class="hp-fill" style="background:var(--player-color)"></div></div>${config.icon}`;
-                document.getElementById('arena-field').appendChild(unitEl);
-                
-                const unitObj = {
-                    id: Date.now() + Math.random(), // Уникальный ID юнита
-                    el: unitEl,
-                    hp: config.hp,
-                    maxHp: config.hp,
-                    y: 80, // Начальная позиция снизу
-                    x: parseFloat(unitEl.style.left),
-                    speed: config.speed,
-                    dmg: config.dmg,
-                    target: 'enemyTower', // Пока все атакуют вражескую башню
-                    lastAttackTime: 0
-                };
-                activeUnits.push(unitObj);
-                updateArenaUI();
-            } else {
-                tg.HapticFeedback.notificationOccurred('error');
-            }
+            const arena = document.getElementById('arena');
+            const unitEl = document.createElement('div');
+            unitEl.className = 'unit';
+            unitEl.style.left = "calc(50% - 17px)";
+            unitEl.style.top = (arena.offsetHeight - 100) + "px";
+            
+            let icon = "⚔️";
+            let speed = 2;
+            let dmg = 2;
+
+            if (type === 'archer') { icon = "🏹"; speed = 3; dmg = 1.5; }
+            if (type === 'giant') { icon = "🛡️"; speed = 1; dmg = 5; }
+
+            unitEl.innerText = icon;
+            arena.appendChild(unitEl);
+
+            units.push({ el: unitEl, y: arena.offsetHeight - 100, speed, dmg });
         };
 
-        function gameLoop() {
-            // Движение и атака юнитов
-            activeUnits.forEach((unit, index) => {
-                if (unit.hp <= 0) {
-                    unit.el.remove();
-                    activeUnits.splice(index, 1);
-                    return;
-                }
+        async function victory() {
+            enemyHP = 1000;
+            player.gold += 100;
+            player.level += 1;
+            units.forEach(u => u.el.remove());
+            units = [];
+            
+            alert("ПОБЕДА! +100 золота");
+            updateUI();
+            await updateDoc(doc(db, "players", uid), player);
+            document.getElementById('enemy-hp').style.width = "100%";
+        }
 
-                // Движение к цели
-                if (unit.y < 420) { // Высота, где юниты начинают атаковать башню
-                    unit.y += unit.speed;
-                    unit.el.style.bottom = unit.y + 'px';
-                } else {
-                    // Атака башни
-                    const now = Date.now();
-                    if (now - unit.lastAttackTime > 1000) { // Атака раз в секунду
-                        enemyTowerHP -= unit.dmg;
-                        unit.lastAttackTime = now;
-                        updateArenaUI();
-                        if (enemyTowerHP <= 0) {
-                            endGame("win");
-                            return;
-                        }
+        init();
+    </script>
+</body>
+</html>
