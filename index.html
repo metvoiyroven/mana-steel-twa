@@ -3,166 +3,139 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Mana & Steel</title>
+    <title>Mana & Steel: Battle</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root {
-            --accent-color: #0088cc;
-        }
         body {
             background-color: var(--tg-theme-bg-color, #1a1a1a);
             color: var(--tg-theme-text-color, #ffffff);
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            overflow: hidden;
+            font-family: sans-serif;
+            display: flex; flex-direction: column; align-items: center;
+            height: 100vh; margin: 0; justify-content: center;
+            user-select: none;
         }
         .container {
             background: var(--tg-theme-secondary-bg-color, #242424);
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-            text-align: center;
-            width: 85%;
-            max-width: 400px;
+            padding: 25px; border-radius: 20px; text-align: center;
+            width: 80%; max-width: 350px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
-        h1 { margin: 0 0 10px 0; font-size: 24px; color: var(--tg-theme-button-color, var(--accent-color)); }
-        .stat-line {
-            display: flex;
-            justify-content: space-between;
-            margin: 10px 0;
-            font-size: 18px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            padding-bottom: 5px;
+        /* Полоска здоровья */
+        .hp-container {
+            width: 100%; background: #444; height: 12px;
+            border-radius: 6px; margin: 15px 0; overflow: hidden;
+            border: 1px solid #555;
         }
-        .gold-count { color: #ffd700; font-weight: bold; }
+        #hp-bar {
+            width: 100%; background: linear-gradient(90deg, #ff4444, #ff6666);
+            height: 100%; transition: width 0.15s ease-out;
+        }
+        /* Монстр */
+        #monster-target {
+            font-size: 100px; margin: 20px 0; cursor: pointer;
+            transition: transform 0.05s; display: inline-block;
+        }
+        #monster-target:active { transform: scale(0.9); }
         
-        button {
-            background-color: var(--tg-theme-button-color, var(--accent-color));
-            color: var(--tg-theme-button-text-color, #ffffff);
-            border: none;
-            padding: 20px 40px;
-            border-radius: 15px;
-            font-size: 20px;
-            font-weight: bold;
-            margin-top: 25px;
-            cursor: pointer;
-            width: 100%;
-            transition: transform 0.1s;
-            box-shadow: 0 4px 0 #006699;
-        }
-        button:active {
-            transform: translateY(4px);
-            box-shadow: 0 0 0 #006699;
-        }
-        #status { font-size: 12px; opacity: 0.6; margin-top: 15px; }
+        .stats { display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold; }
+        .gold { color: #ffd700; }
+        .level { color: #0088cc; }
+        #status { font-size: 10px; opacity: 0.5; margin-top: 10px; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1 id="user-name">Загрузка...</h1>
-        
-        <div class="stat-line">
-            <span>Уровень:</span>
-            <span id="level">1</span>
-        </div>
-        
-        <div class="stat-line">
-            <span>Золото:</span>
-            <span class="gold-count" id="gold">0</span>
+        <div class="stats">
+            <span class="level">LVL: <span id="p-level">1</span></span>
+            <span class="gold">💰 <span id="p-gold">0</span></span>
         </div>
 
-        <button onclick="clickAttack()">⚔️ АТАКОВАТЬ</button>
+        <h3 id="m-name" style="margin: 0;">Слизений Ур. 1</h3>
         
-        <div id="status">Синхронизация с облаком...</div>
+        <div class="hp-container">
+            <div id="hp-bar"></div>
+        </div>
+        <div id="hp-text" style="font-size: 12px;">10 / 10 HP</div>
+
+        <div id="monster-target" onclick="attack()">👾</div>
+
+        <p style="font-size: 14px; opacity: 0.8;">Кликай на монстра!</p>
+        <div id="status">Загрузка героя...</div>
     </div>
 
     <script type="module">
-        // Импорт Firebase модулей
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, doc, getDoc, setDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // Твой конфиг Firebase
         const firebaseConfig = {
-          apiKey: "AIzaSyCyZxBg-j_XKkvaqoKxi62uFY73kDkVWk4",
-          authDomain: "manasteel-bf5f7.firebaseapp.com",
-          projectId: "manasteel-bf5f7",
-          storageBucket: "manasteel-bf5f7.firebasestorage.app",
-          messagingSenderId: "120074826718",
-          appId: "1:120074826718:web:9b289a1d28aceda479634f"
+            apiKey: "AIzaSyCyZxBg-j_XKkvaqoKxi62uFY73kDkVWk4",
+            authDomain: "manasteel-bf5f7.firebaseapp.com",
+            projectId: "manasteel-bf5f7",
+            storageBucket: "manasteel-bf5f7.firebasestorage.app",
+            messagingSenderId: "120074826718",
+            appId: "1:120074826718:web:9b289a1d28aceda479634f"
         };
 
-        // Инициализация
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const tg = window.Telegram.WebApp;
+        tg.expand();
 
-        tg.expand(); // Развернуть на всё окно
-        tg.ready();
+        let player = { level: 1, gold: 0, damage: 2 };
+        let monster = { hp: 10, maxHp: 10, lvl: 1 };
+        const userId = tg.initDataUnsafe.user?.id || "local_dev";
 
-        // Получаем данные из Telegram
-        const userId = tg.initDataUnsafe.user?.id || "test_user_123";
-        const userName = tg.initDataUnsafe.user?.first_name || "Великий Герой";
-
-        // Функция загрузки данных игрока
-        async function loadPlayerData() {
-            const userRef = doc(db, "players", String(userId));
-            try {
-                const userSnap = await getDoc(userRef);
-
-                if (userSnap.exists()) {
-                    renderUI(userSnap.data());
-                } else {
-                    // Создаем нового игрока, если его нет
-                    const newPlayerData = {
-                        name: userName,
-                        gold: 0,
-                        level: 1,
-                        damage: 1
-                    };
-                    await setDoc(userRef, newPlayerData);
-                    renderUI(newPlayerData);
-                }
-                document.getElementById('status').innerText = "Данные сохранены";
-            } catch (e) {
-                console.error("Ошибка Firebase:", e);
-                document.getElementById('status').innerText = "Ошибка доступа к БД. Проверь правила Firestore!";
+        async function init() {
+            const ref = doc(db, "players", String(userId));
+            const snap = await getDoc(ref);
+            if (snap.exists()) {
+                player = { ...player, ...snap.data() };
+            } else {
+                await setDoc(ref, player);
             }
+            updateUI();
+            document.getElementById('status').innerText = "Охота началась";
         }
 
-        function renderUI(data) {
-            document.getElementById('user-name').innerText = data.name;
-            document.getElementById('gold').innerText = Math.floor(data.gold);
-            document.getElementById('level').innerText = data.level;
-        }
+        window.attack = async () => {
+            monster.hp -= player.damage + player.level;
+            tg.HapticFeedback.impactOccurred('light');
 
-        // Логика клика
-        window.clickAttack = async () => {
-            // Визуальный отклик сразу (для скорости)
-            const goldEl = document.getElementById('gold');
-            goldEl.innerText = parseInt(goldEl.innerText) + 1;
+            if (monster.hp <= 0) {
+                // Победа
+                tg.HapticFeedback.notificationOccurred('success');
+                let reward = 10 * monster.lvl;
+                player.gold += reward;
+                
+                // Шанс поднять уровень игрока при убийстве
+                if (Math.random() > 0.7) player.level++;
 
-            // Вибрация Telegram
-            tg.HapticFeedback.impactOccurred('medium');
-
-            // Обновление в БД (в фоне)
-            const userRef = doc(db, "players", String(userId));
-            try {
-                await updateDoc(userRef, {
-                    gold: increment(1)
+                // Следующий монстр
+                monster.lvl++;
+                monster.maxHp = 10 + (monster.lvl * 8);
+                monster.hp = monster.maxHp;
+                
+                // Сохранение в БД
+                const ref = doc(db, "players", String(userId));
+                await updateDoc(ref, { 
+                    gold: player.gold, 
+                    level: player.level 
                 });
-            } catch (e) {
-                console.error("Ошибка при сохранении:", e);
             }
+            updateUI();
         };
 
-        // Запуск игры
-        loadPlayerData();
+        function updateUI() {
+            document.getElementById('p-gold').innerText = player.gold;
+            document.getElementById('p-level').innerText = player.level;
+            document.getElementById('m-name').innerText = `Монстр Ур. ${monster.lvl}`;
+            
+            const hpProc = (monster.hp / monster.maxHp) * 100;
+            document.getElementById('hp-bar').style.width = Math.max(0, hpProc) + "%";
+            document.getElementById('hp-text').innerText = `${Math.max(0, monster.hp)} / ${monster.maxHp} HP`;
+        }
+
+        init();
     </script>
 </body>
 </html>
