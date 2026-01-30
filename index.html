@@ -1,1 +1,168 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Mana & Steel</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --accent-color: #0088cc;
+        }
+        body {
+            background-color: var(--tg-theme-bg-color, #1a1a1a);
+            color: var(--tg-theme-text-color, #ffffff);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        .container {
+            background: var(--tg-theme-secondary-bg-color, #242424);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            text-align: center;
+            width: 85%;
+            max-width: 400px;
+        }
+        h1 { margin: 0 0 10px 0; font-size: 24px; color: var(--tg-theme-button-color, var(--accent-color)); }
+        .stat-line {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            font-size: 18px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 5px;
+        }
+        .gold-count { color: #ffd700; font-weight: bold; }
+        
+        button {
+            background-color: var(--tg-theme-button-color, var(--accent-color));
+            color: var(--tg-theme-button-text-color, #ffffff);
+            border: none;
+            padding: 20px 40px;
+            border-radius: 15px;
+            font-size: 20px;
+            font-weight: bold;
+            margin-top: 25px;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.1s;
+            box-shadow: 0 4px 0 #006699;
+        }
+        button:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #006699;
+        }
+        #status { font-size: 12px; opacity: 0.6; margin-top: 15px; }
+    </style>
+</head>
+<body>
 
+    <div class="container">
+        <h1 id="user-name">Загрузка...</h1>
+        
+        <div class="stat-line">
+            <span>Уровень:</span>
+            <span id="level">1</span>
+        </div>
+        
+        <div class="stat-line">
+            <span>Золото:</span>
+            <span class="gold-count" id="gold">0</span>
+        </div>
+
+        <button onclick="clickAttack()">⚔️ АТАКОВАТЬ</button>
+        
+        <div id="status">Синхронизация с облаком...</div>
+    </div>
+
+    <script type="module">
+        // Импорт Firebase модулей
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // Твой конфиг Firebase
+        const firebaseConfig = {
+          apiKey: "AIzaSyCyZxBg-j_XKkvaqoKxi62uFY73kDkVWk4",
+          authDomain: "manasteel-bf5f7.firebaseapp.com",
+          projectId: "manasteel-bf5f7",
+          storageBucket: "manasteel-bf5f7.firebasestorage.app",
+          messagingSenderId: "120074826718",
+          appId: "1:120074826718:web:9b289a1d28aceda479634f"
+        };
+
+        // Инициализация
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const tg = window.Telegram.WebApp;
+
+        tg.expand(); // Развернуть на всё окно
+        tg.ready();
+
+        // Получаем данные из Telegram
+        const userId = tg.initDataUnsafe.user?.id || "test_user_123";
+        const userName = tg.initDataUnsafe.user?.first_name || "Великий Герой";
+
+        // Функция загрузки данных игрока
+        async function loadPlayerData() {
+            const userRef = doc(db, "players", String(userId));
+            try {
+                const userSnap = await getDoc(userRef);
+
+                if (userSnap.exists()) {
+                    renderUI(userSnap.data());
+                } else {
+                    // Создаем нового игрока, если его нет
+                    const newPlayerData = {
+                        name: userName,
+                        gold: 0,
+                        level: 1,
+                        damage: 1
+                    };
+                    await setDoc(userRef, newPlayerData);
+                    renderUI(newPlayerData);
+                }
+                document.getElementById('status').innerText = "Данные сохранены";
+            } catch (e) {
+                console.error("Ошибка Firebase:", e);
+                document.getElementById('status').innerText = "Ошибка доступа к БД. Проверь правила Firestore!";
+            }
+        }
+
+        function renderUI(data) {
+            document.getElementById('user-name').innerText = data.name;
+            document.getElementById('gold').innerText = Math.floor(data.gold);
+            document.getElementById('level').innerText = data.level;
+        }
+
+        // Логика клика
+        window.clickAttack = async () => {
+            // Визуальный отклик сразу (для скорости)
+            const goldEl = document.getElementById('gold');
+            goldEl.innerText = parseInt(goldEl.innerText) + 1;
+
+            // Вибрация Telegram
+            tg.HapticFeedback.impactOccurred('medium');
+
+            // Обновление в БД (в фоне)
+            const userRef = doc(db, "players", String(userId));
+            try {
+                await updateDoc(userRef, {
+                    gold: increment(1)
+                });
+            } catch (e) {
+                console.error("Ошибка при сохранении:", e);
+            }
+        };
+
+        // Запуск игры
+        loadPlayerData();
+    </script>
+</body>
+</html>
