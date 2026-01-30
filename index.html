@@ -3,69 +3,122 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Mana & Steel: Battle</title>
+    <title>Mana & Steel: Chat Update</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        :root {
+            --bg: #0f172a; --card-bg: #1e293b; --text: #f8fafc;
+            --accent: #38bdf8; --gold: #f59e0b; --danger: #ef4444; --success: #10b981;
+        }
+        .light-theme { --bg: #f1f5f9; --card-bg: #ffffff; --text: #0f172a; --accent: #0284c7; }
+
         body {
-            background-color: var(--tg-theme-bg-color, #1a1a1a);
-            color: var(--tg-theme-text-color, #ffffff);
-            font-family: sans-serif;
-            display: flex; flex-direction: column; align-items: center;
-            height: 100vh; margin: 0; justify-content: center;
-            user-select: none;
+            background-color: var(--bg); color: var(--text);
+            font-family: 'Inter', sans-serif; margin: 0; padding: 0;
+            display: flex; flex-direction: column; height: 100vh; transition: 0.3s;
         }
-        .container {
-            background: var(--tg-theme-secondary-bg-color, #242424);
-            padding: 25px; border-radius: 20px; text-align: center;
-            width: 80%; max-width: 350px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+
+        .nav-bar {
+            display: flex; justify-content: space-around; background: var(--card-bg);
+            padding: 12px 0; border-top: 1px solid rgba(255,255,255,0.1);
+            position: fixed; bottom: 0; width: 100%; z-index: 100;
         }
-        /* Полоска здоровья */
-        .hp-container {
-            width: 100%; background: #444; height: 12px;
-            border-radius: 6px; margin: 15px 0; overflow: hidden;
-            border: 1px solid #555;
-        }
-        #hp-bar {
-            width: 100%; background: linear-gradient(90deg, #ff4444, #ff6666);
-            height: 100%; transition: width 0.15s ease-out;
-        }
-        /* Монстр */
-        #monster-target {
-            font-size: 100px; margin: 20px 0; cursor: pointer;
-            transition: transform 0.05s; display: inline-block;
-        }
-        #monster-target:active { transform: scale(0.9); }
+        .nav-item { font-size: 10px; cursor: pointer; opacity: 0.6; text-align: center; flex: 1; }
+        .nav-item.active { opacity: 1; color: var(--accent); font-weight: bold; }
+
+        .screen { display: none; padding: 15px; padding-bottom: 95px; overflow-y: auto; flex: 1; }
+        .screen.active { display: flex; flex-direction: column; animation: fadeIn 0.2s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .card { background: var(--card-bg); border-radius: 16px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .btn { background: var(--accent); color: white; border: none; padding: 12px; border-radius: 12px; font-weight: bold; width: 100%; cursor: pointer; }
         
-        .stats { display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold; }
-        .gold { color: #ffd700; }
-        .level { color: #0088cc; }
-        #status { font-size: 10px; opacity: 0.5; margin-top: 10px; }
+        .hp-bar-bg { width: 100%; background: #334155; height: 14px; border-radius: 7px; overflow: hidden; margin: 10px 0; }
+        #hp-fill { width: 100%; background: linear-gradient(90deg, #f43f5e, #fb7185); height: 100%; transition: 0.2s; }
+
+        input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #475569; background: #0f172a; color: white; box-sizing: border-box; }
+        
+        /* ЧАТ СТИЛИ */
+        .chat-container { flex: 1; overflow-y: auto; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px; }
+        .msg { padding: 8px 12px; border-radius: 12px; background: rgba(255,255,255,0.05); max-width: 85%; word-wrap: break-word; }
+        .msg b { font-size: 11px; color: var(--accent); display: block; }
+        .msg p { margin: 2px 0 0 0; font-size: 14px; }
+        .msg.my-msg { align-self: flex-end; background: var(--accent); color: white; }
+        .msg.my-msg b { color: white; opacity: 0.8; }
+        
+        .chat-input-area { display: flex; gap: 8px; background: var(--card-bg); padding: 10px; border-radius: 12px; }
+        .chat-tabs { display: flex; gap: 10px; margin-bottom: 10px; }
+        .chat-tab { padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; background: #334155; }
+        .chat-tab.active { background: var(--accent); color: white; }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <div class="stats">
-            <span class="level">LVL: <span id="p-level">1</span></span>
-            <span class="gold">💰 <span id="p-gold">0</span></span>
+    <div id="screen-battle" class="screen active">
+        <div class="card" style="text-align: center;">
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: var(--accent)">УР: <span id="p-lvl">1</span></span>
+                <span style="color: var(--gold)">💰 <span id="p-gold">0</span></span>
+            </div>
+            <h2 id="m-name" style="margin: 15px 0 5px 0;">Загрузка...</h2>
+            <div class="hp-bar-bg"><div id="hp-fill"></div></div>
+            <div id="monster-target" onclick="doAttack()" style="font-size: 90px; margin: 20px 0; cursor: pointer; display: inline-block;">👾</div>
+            <div id="active-weapon" style="font-size: 13px; color: var(--success);">Кулаки</div>
+            <div id="bot-status" style="display: none; font-size: 12px; color: var(--accent); margin-top: 10px;">🤖 Бот атакует...</div>
         </div>
+    </div>
 
-        <h3 id="m-name" style="margin: 0;">Слизений Ур. 1</h3>
-        
-        <div class="hp-container">
-            <div id="hp-bar"></div>
+    <div id="screen-chat" class="screen">
+        <div class="chat-tabs">
+            <div id="tab-global" class="chat-tab active" onclick="switchChat('global')">Глобальный</div>
+            <div id="tab-friends" class="chat-tab" onclick="switchChat('friends')">Друзья</div>
         </div>
-        <div id="hp-text" style="font-size: 12px;">10 / 10 HP</div>
+        <div id="chat-box" class="chat-container"></div>
+        <div class="chat-input-area">
+            <input type="text" id="msg-input" placeholder="Сообщение...">
+            <button class="btn" style="width: 60px;" onclick="sendMessage()">➤</button>
+        </div>
+    </div>
 
-        <div id="monster-target" onclick="attack()">👾</div>
+    <div id="screen-inventory" class="screen">
+        <h3>🎒 Магазин & Инвентарь</h3>
+        <div class="card" id="shop-list"></div>
+        <div class="card" id="inventory-list"></div>
+    </div>
 
-        <p style="font-size: 14px; opacity: 0.8;">Кликай на монстра!</p>
-        <div id="status">Загрузка героя...</div>
+    <div id="screen-friends" class="screen">
+        <h3>👥 Друзья</h3>
+        <div class="card">
+            <input type="text" id="friend-id-input" placeholder="ID друга">
+            <button class="btn" style="margin-top:10px" onclick="addFriend()">Добавить</button>
+        </div>
+        <div class="card" id="friends-list"></div>
+    </div>
+
+    <div id="screen-profile" class="screen">
+        <h3>👤 Профиль</h3>
+        <div class="card">
+            <p>Твой ID: <span style="background:#000; padding:2px 5px;" id="my-id-display">...</span></p>
+            <input type="text" id="in-name" maxlength="15">
+            <button class="btn" style="margin-top:10px" onclick="updateNick()">Сменить ник</button>
+        </div>
+        <div class="card">
+            <button class="btn" id="daily-btn" style="background: var(--gold);" onclick="claimDaily()">🎁 Ежедневный бонус</button>
+        </div>
+        <div class="card"><button class="btn" style="background:#64748b" onclick="toggleTheme()">Тема 🌗</button></div>
+    </div>
+
+    <div class="nav-bar">
+        <div class="nav-item active" onclick="showScreen('battle')">⚔️<br>Битва</div>
+        <div class="nav-item" onclick="showScreen('chat')">💬<br>Чат</div>
+        <div class="nav-item" onclick="showScreen('inventory')">🎒<br>Инвент.</div>
+        <div class="nav-item" onclick="showScreen('friends')">👥<br>Друзья</div>
+        <div class="nav-item" onclick="showScreen('profile')">👤<br>Герой</div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, orderBy, limit, onSnapshot, addDoc, serverTimestamp, arrayUnion } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCyZxBg-j_XKkvaqoKxi62uFY73kDkVWk4",
@@ -81,60 +134,153 @@
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        let player = { level: 1, gold: 0, damage: 2 };
-        let monster = { hp: 10, maxHp: 10, lvl: 1 };
-        const userId = tg.initDataUnsafe.user?.id || "local_dev";
+        const ITEMS_DB = {
+            'w1': { n: 'Деревянный меч', d: 5, p: 150 },
+            'w2': { n: 'Стальной меч', d: 15, p: 600 },
+            'w3': { n: 'Меч Дракона', d: 50, p: 2500 },
+            'bot': { n: '🤖 Авто-кликер', d: 0, p: 10000 }
+        };
+
+        let p = { name: 'Герой', level: 1, gold: 0, inventory: [], equipped: null, hasBot: false, lastDaily: 0, friends: [] };
+        let m = { hp: 10, max: 10, lvl: 1 };
+        let currentChatMode = 'global';
+        const uid = String(tg.initDataUnsafe.user?.id || "dev_test");
 
         async function init() {
-            const ref = doc(db, "players", String(userId));
-            const snap = await getDoc(ref);
-            if (snap.exists()) {
-                player = { ...player, ...snap.data() };
-            } else {
-                await setDoc(ref, player);
-            }
-            updateUI();
-            document.getElementById('status').innerText = "Охота началась";
+            const snap = await getDoc(doc(db, "players", uid));
+            if (snap.exists()) p = { ...p, ...snap.data() };
+            else await setDoc(doc(db, "players", uid), p);
+            
+            document.getElementById('my-id-display').innerText = uid;
+            updateUI(); renderShop(); renderInventory();
+            startAutoClicker();
+            listenToChat();
         }
 
-        window.attack = async () => {
-            monster.hp -= player.damage + player.level;
-            tg.HapticFeedback.impactOccurred('light');
+        window.showScreen = (name) => {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            document.getElementById('screen-' + name).classList.add('active');
+            event.currentTarget.classList.add('active');
+            if(name === 'chat') scrollChat();
+        };
 
-            if (monster.hp <= 0) {
-                // Победа
-                tg.HapticFeedback.notificationOccurred('success');
-                let reward = 10 * monster.lvl;
-                player.gold += reward;
-                
-                // Шанс поднять уровень игрока при убийстве
-                if (Math.random() > 0.7) player.level++;
+        window.switchChat = (mode) => {
+            currentChatMode = mode;
+            document.querySelectorAll('.chat-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-' + mode).classList.add('active');
+            listenToChat();
+        };
 
-                // Следующий монстр
-                monster.lvl++;
-                monster.maxHp = 10 + (monster.lvl * 8);
-                monster.hp = monster.maxHp;
-                
-                // Сохранение в БД
-                const ref = doc(db, "players", String(userId));
-                await updateDoc(ref, { 
-                    gold: player.gold, 
-                    level: player.level 
+        function listenToChat() {
+            const q = query(collection(db, "messages"), orderBy("createdAt", "desc"), limit(30));
+            onSnapshot(q, (snap) => {
+                const chatBox = document.getElementById('chat-box');
+                let html = "";
+                const msgs = [];
+                snap.forEach(d => msgs.push(d.data()));
+                msgs.reverse().forEach(data => {
+                    // Фильтр для чата друзей
+                    if(currentChatMode === 'friends' && data.uid !== uid && !p.friends.includes(data.uid)) return;
+                    
+                    const isMy = data.uid === uid;
+                    html += `<div class="msg ${isMy ? 'my-msg' : ''}">
+                        <b>${data.sender}</b>
+                        <p>${data.text}</p>
+                    </div>`;
                 });
+                chatBox.innerHTML = html;
+                scrollChat();
+            });
+        }
+
+        window.sendMessage = async () => {
+            const input = document.getElementById('msg-input');
+            const text = input.value.trim();
+            if(!text) return;
+            input.value = "";
+            await addDoc(collection(db, "messages"), {
+                uid: uid,
+                sender: p.name,
+                text: text,
+                createdAt: serverTimestamp()
+            });
+        };
+
+        function scrollChat() {
+            const cb = document.getElementById('chat-box');
+            cb.scrollTop = cb.scrollHeight;
+        }
+
+        window.doAttack = (isAuto = false) => {
+            let dmg = 2 + (p.level * 2) + (p.equipped ? ITEMS_DB[p.equipped].d : 0);
+            m.hp -= dmg;
+            if(!isAuto) tg.HapticFeedback.impactOccurred('light');
+            if (m.hp <= 0) {
+                p.gold += 10 * m.lvl;
+                if (Math.random() > 0.8) p.level++;
+                m.lvl++; m.max = 10 + (m.lvl * 12); m.hp = m.max;
+                save();
             }
             updateUI();
         };
 
-        function updateUI() {
-            document.getElementById('p-gold').innerText = player.gold;
-            document.getElementById('p-level').innerText = player.level;
-            document.getElementById('m-name').innerText = `Монстр Ур. ${monster.lvl}`;
-            
-            const hpProc = (monster.hp / monster.maxHp) * 100;
-            document.getElementById('hp-bar').style.width = Math.max(0, hpProc) + "%";
-            document.getElementById('hp-text').innerText = `${Math.max(0, monster.hp)} / ${monster.maxHp} HP`;
-        }
+        window.claimDaily = async () => {
+            const now = Date.now();
+            if (now - p.lastDaily >= 86400000) {
+                p.gold += 500; p.lastDaily = now;
+                save(); updateUI();
+                alert("Бонус 500💰 зачислен!");
+            } else alert("Бонус еще не готов!");
+        };
 
+        window.addFriend = async () => {
+            const fId = document.getElementById('friend-id-input').value.trim();
+            if (fId === uid) return;
+            const fSnap = await getDoc(doc(db, "players", fId));
+            if (fSnap.exists()) {
+                await updateDoc(doc(db, "players", uid), { friends: arrayUnion(fId) });
+                p.friends.push(fId);
+                alert("Друг добавлен!");
+            }
+        };
+
+        function save() { updateDoc(doc(db, "players", uid), p); }
+        window.buyItem = (id) => {
+            const item = ITEMS_DB[id];
+            if (p.gold >= item.p) {
+                if (id === 'bot') p.hasBot = true; 
+                else p.inventory.push(id);
+                p.gold -= item.p; save(); updateUI(); renderShop(); renderInventory();
+            }
+        };
+        window.toggleEquip = (id) => { p.equipped = (p.equipped === id) ? null : id; save(); updateUI(); renderInventory(); };
+        window.updateNick = () => { let n = document.getElementById('in-name').value.trim(); if(n){ p.name = n; save(); alert("Ник обновлен!"); } };
+        function startAutoClicker() { if(p.hasBot) setInterval(() => { if(document.getElementById('screen-battle').classList.contains('active')) doAttack(true); }, 1000); }
+        function renderShop() {
+            let html = ""; for (let id in ITEMS_DB) {
+                const item = ITEMS_DB[id]; const owned = (id === 'bot') ? p.hasBot : p.inventory.includes(id);
+                html += `<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #334155;">
+                <span>${item.n}</span><button class="btn" style="width:70px;padding:5px" onclick="buyItem('${id}')" ${owned?'disabled':''}>${owned?'🛒':item.p}</button></div>`;
+            } document.getElementById('shop-list').innerHTML = html;
+        }
+        function renderInventory() {
+            let html = ""; p.inventory.forEach(id => {
+                const isEq = p.equipped === id;
+                html += `<div style="display:flex;justify-content:space-between;padding:10px 0;"><span>${ITEMS_DB[id].n}</span>
+                <button class="btn" style="width:70px;padding:5px;background:${isEq?'#64748b':''}" onclick="toggleEquip('${id}')">${isEq?'Снять':'Надеть'}</button></div>`;
+            }); document.getElementById('inventory-list').innerHTML = html || "Пусто";
+        }
+        function updateUI() {
+            document.getElementById('p-gold').innerText = Math.floor(p.gold);
+            document.getElementById('p-lvl').innerText = p.level;
+            document.getElementById('m-name').innerText = `Враг Ур. ${m.lvl}`;
+            document.getElementById('hp-fill').style.width = (m.hp/m.max*100) + "%";
+            document.getElementById('in-name').value = p.name;
+            document.getElementById('active-weapon').innerText = p.equipped ? `🗡 ${ITEMS_DB[p.equipped].n}` : "👊 Кулаки";
+            if (p.hasBot) document.getElementById('bot-status').style.display = 'block';
+        }
+        window.toggleTheme = () => document.body.classList.toggle('light-theme');
         init();
     </script>
 </body>
